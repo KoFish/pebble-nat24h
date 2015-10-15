@@ -3,7 +3,7 @@
   "shortName": "nat24h",
   "longName": "Noon at the top 24h watchface",
   "companyName": "Kingdom of Fish",
-  "versionLabel": "1.0",
+  "versionLabel": "1.1",
   "sdkVersion": "3",
   "targetPlatforms": ["basalt"],
   "watchapp": {

@@ -19,7 +19,8 @@ typedef struct {
     int hours;
     int minutes;
     char str[6];
-    int32_t angle;
+    int32_t hour_angle;
+    int32_t min_angle;
 } Time;
 
 static Time s_last_time;
@@ -49,7 +50,7 @@ static void draw_radial_line(GPoint center, int32_t angle, uint16_t width, int32
     graphics_draw_line(ctx, p_start, p_end);
 }
 
-static void draw_indicator(GPoint center, int32_t angle, GContext *ctx) {
+static void draw_hour_indicator(GPoint center, int32_t angle, GContext *ctx) {
     graphics_context_set_stroke_color(ctx, GColorWhite);
     if (is_animating()) {
         draw_radial_line(center, s_anim_time, INDICATOR_WIDTH, 0, s_indicator_length, ctx);
@@ -58,11 +59,17 @@ static void draw_indicator(GPoint center, int32_t angle, GContext *ctx) {
     }
 }
 
+static void draw_minute_indicator(GPoint center, int32_t angle, GContext *ctx) {
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_circle(ctx, calculate_point(center, angle, s_indicator_length), 3);
+}
+
 static void indicator_layer_update(Layer *layer, GContext *ctx) {
     graphics_context_set_antialiased(ctx, true);
     GRect bounds = layer_get_bounds(layer);
     GPoint center = grect_center_point(&bounds);
-    draw_indicator(center, s_last_time.angle, ctx);
+    draw_minute_indicator(center, s_last_time.min_angle, ctx);
+    draw_hour_indicator(center, s_last_time.hour_angle, ctx);
 }
 
 /* offset = How many parts of a full circle to offset the start with.
@@ -111,12 +118,13 @@ static void tick_handler(struct tm *tick_time, TimeUnits changed) {
     s_last_time.hours = tick_time->tm_hour;
     s_last_time.minutes = tick_time->tm_min;
 #ifndef DEBUG
-    s_last_time.angle = s_last_time.hours * TRIG_MAX_RATIO / 24;
-    s_last_time.angle += s_last_time.minutes * TRIG_MAX_RATIO / (60 * 24);
+    s_last_time.hour_angle = s_last_time.hours * TRIG_MAX_RATIO / 24;
+    s_last_time.hour_angle += s_last_time.minutes * TRIG_MAX_RATIO / (60 * 24);
 #else
-    s_last_time.angle = tick_time->tm_sec * TRIG_MAX_RATIO / 60;
+    s_last_time.hour_angle = tick_time->tm_sec * TRIG_MAX_RATIO / 60;
 #endif
-    s_last_time.angle += TRIG_MAX_RATIO / 2;
+    s_last_time.min_angle = s_last_time.minutes * TRIG_MAX_RATIO / 60;
+    s_last_time.hour_angle += TRIG_MAX_RATIO / 2;
     clock_copy_time_string(s_last_time.str, sizeof(s_last_time.str));
 
     if (s_time_layer != NULL) text_layer_set_text(s_time_layer, s_last_time.str);
@@ -158,7 +166,7 @@ static void main_window_unload(Window *window) {
 }
 
 static void indicator_update(Animation *anim, AnimationProgress dist_normalized) {
-    s_anim_time = anim_percentage(dist_normalized, s_last_time.angle);
+    s_anim_time = anim_percentage(dist_normalized, s_last_time.hour_angle);
     layer_mark_dirty(s_indicator_layer);
 }
 
